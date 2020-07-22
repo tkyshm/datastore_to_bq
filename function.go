@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -56,8 +57,10 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 
 	// check backup file existing
 	count := 0
+	bucket := os.Getenv("BUCKET")
+	objectName := strings.TrimLeft(exportMetaFile, fmt.Sprintf("gs://%s", bucket))
 	for {
-		if err := checkBackupDone(os.Getenv("BUCKET"), exportMetaFile); err != nil {
+		if err := checkBackupDone(bucket, objectName); err != nil {
 			fmt.Printf("checkBackupDone status: %v", err)
 		}
 		if count > 60 {
@@ -101,7 +104,7 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func checkBackupDone(bucket, filename string) error {
+func checkBackupDone(bucket, objectName string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -109,7 +112,7 @@ func checkBackupDone(bucket, filename string) error {
 		return err
 	}
 
-	r, err := client.Bucket(bucket).Object(filename).NewReader(ctx)
+	r, err := client.Bucket(bucket).Object(objectName).NewReader(ctx)
 	if err != nil {
 		log.Printf("err: %v", err)
 		return err
