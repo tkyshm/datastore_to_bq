@@ -58,7 +58,7 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	// check backup file existing
 	count := 0
 	bucket := os.Getenv("BUCKET")
-	objectName := strings.TrimLeft(exportMetaFile, fmt.Sprintf("gs://%s", bucket))
+	objectName := strings.TrimLeft(exportMetaFile, fmt.Sprintf("gs://%s/", bucket))
 	for {
 		if err := checkBackupDone(bucket, objectName); err != nil {
 			fmt.Printf("checkBackupDone status: %v", err)
