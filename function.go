@@ -49,7 +49,6 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	time.Sleep(time.Second * 5)
 
 	// load bigquery
 	metadataPath := getMetadataPath(name, kind)
