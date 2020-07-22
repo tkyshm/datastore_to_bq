@@ -55,8 +55,18 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	metadataPath := getMetadataPath(name, kind)
 	exportMetaFile := fmt.Sprintf("%s%s", prefix, metadataPath)
 
-	// for debug
-	checkFiles(os.Getenv("BUCKET"), exportMetaFile)
+	// check backup file existing
+	count := 0
+	for {
+		if err := checkBackupDone(os.Getenv("BUCKET"), exportMetaFile); err != nil {
+			fmt.Printf("checkBackupDone status: %v", err)
+		}
+		if count > 60 {
+			break
+		}
+		count++
+		time.Sleep(time.Second * 1)
+	}
 
 	gcsRef := bigquery.NewGCSReference(exportMetaFile)
 	gcsRef.AllowJaggedRows = true
@@ -92,18 +102,18 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func checkFiles(bucket, filename string) bool {
+func checkBackupDone(bucket, filename string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Printf("err: %v", err)
-		return false
+		return err
 	}
 
 	r, err := client.Bucket(bucket).Object(filename).NewReader(ctx)
 	if err != nil {
 		log.Printf("err: %v", err)
-		return false
+		return err
 	}
 	defer r.Close()
 
@@ -111,7 +121,7 @@ func checkFiles(bucket, filename string) bool {
 	buf.ReadFrom(r)
 	fmt.Printf("%s", buf.String())
 
-	return true
+	return nil
 }
 
 func getOutputGS() (string, error) {
