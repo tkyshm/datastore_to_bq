@@ -67,13 +67,13 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	myDataset := client.Dataset(getDataset())
 	loader := myDataset.Table(kind).LoaderFrom(gcsRef)
 	loader.CreateDisposition = bigquery.CreateNever
+	loader.WriteDisposition = bigquery.WriteTruncate
 	job, err := loader.Run(ctx)
 	if err != nil {
 		log.Printf("failed to run loader: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	status, err := job.Wait(ctx)
 	if err != nil {
 		log.Printf("failed to run loader: %v", err)
