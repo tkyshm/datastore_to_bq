@@ -1,6 +1,7 @@
 package function
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -54,6 +55,9 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	metadataPath := getMetadataPath(name, kind)
 	exportMetaFile := fmt.Sprintf("%s%s", prefix, metadataPath)
 
+	// for debug
+	checkFiles(os.Getenv("BUCKET"), exportMetaFile)
+
 	gcsRef := bigquery.NewGCSReference(exportMetaFile)
 	gcsRef.AllowJaggedRows = true
 	gcsRef.SourceFormat = bigquery.DatastoreBackup
@@ -86,6 +90,28 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	}
 	log.Printf("done %#v", status.State)
 	w.WriteHeader(http.StatusOK)
+}
+
+func checkFiles(bucket, filename string) bool {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		log.Printf("err: %v", err)
+		return false
+	}
+
+	r, err := client.Bucket(bucket).Object(filename).NewReader(ctx)
+	if err != nil {
+		log.Printf("err: %v", err)
+		return false
+	}
+	defer r.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r)
+	fmt.Printf("%s", buf.String())
+
+	return true
 }
 
 func getOutputGS() (string, error) {
