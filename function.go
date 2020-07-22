@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -49,11 +50,28 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	time.Sleep(time.Second * 10)
 
 	// load bigquery
 	metadataPath := getMetadataPath(name, kind)
 	exportMetaFile := fmt.Sprintf("%s%s", prefix, metadataPath)
+
+	// check backup file existing
+	count := 0
+	bucket := os.Getenv("BUCKET")
+	objectName := strings.TrimLeft(exportMetaFile, fmt.Sprintf("gs://%s/", bucket))
+	for {
+		count++
+		if count > 60 {
+			break
+		}
+
+		if err := checkBackupDone(bucket, objectName); err != nil {
+			fmt.Printf("checkBackupDone status: %v", err)
+		} else {
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
 
 	gcsRef := bigquery.NewGCSReference(exportMetaFile)
 	gcsRef.AllowJaggedRows = true
@@ -87,6 +105,24 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	}
 	log.Printf("done %#v", status.State)
 	w.WriteHeader(http.StatusOK)
+}
+
+func checkBackupDone(bucket, objectName string) error {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		log.Printf("err: %v", err)
+		return err
+	}
+
+	r, err := client.Bucket(bucket).Object(objectName).NewReader(ctx)
+	if err != nil {
+		log.Printf("err: %v", err)
+		return err
+	}
+	defer r.Close()
+
+	return nil
 }
 
 func getOutputGS() (string, error) {
