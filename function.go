@@ -1,7 +1,6 @@
 package function
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -116,10 +115,6 @@ func checkBackupDone(bucket, filename string) error {
 		return err
 	}
 	defer r.Close()
-
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(r)
-	fmt.Printf("%s", buf.String())
 
 	return nil
 }
