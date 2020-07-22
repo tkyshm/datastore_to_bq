@@ -60,13 +60,16 @@ func DatastoreToBQ(w http.ResponseWriter, _ *http.Request) {
 	bucket := os.Getenv("BUCKET")
 	objectName := strings.TrimLeft(exportMetaFile, fmt.Sprintf("gs://%s/", bucket))
 	for {
-		if err := checkBackupDone(bucket, objectName); err != nil {
-			fmt.Printf("checkBackupDone status: %v", err)
-		}
+		count++
 		if count > 60 {
 			break
 		}
-		count++
+
+		if err := checkBackupDone(bucket, objectName); err != nil {
+			fmt.Printf("checkBackupDone status: %v", err)
+		} else {
+			break
+		}
 		time.Sleep(time.Second * 1)
 	}
 
